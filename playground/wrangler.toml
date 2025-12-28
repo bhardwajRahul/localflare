@@ -1,0 +1,51 @@
+name = "localflare-playground"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "playground-db"
+database_id = "local-playground-db"
+migrations_dir = "migrations"
+
+# KV Namespace
+[[kv_namespaces]]
+binding = "CACHE"
+id = "playground-cache"
+
+# Another KV for sessions
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "playground-sessions"
+
+# R2 Bucket
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "playground-storage"
+
+# Queue Producer
+[[queues.producers]]
+binding = "TASKS"
+queue = "task-queue"
+
+# Queue Consumer
+[[queues.consumers]]
+queue = "task-queue"
+max_batch_size = 10
+max_batch_timeout = 5
+
+# Durable Objects
+[durable_objects]
+bindings = [
+  { name = "COUNTER", class_name = "Counter" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["Counter"]
+
+# Environment Variables
+[vars]
+ENVIRONMENT = "development"
+API_VERSION = "v1"

@@ -1,0 +1,44 @@
+{
+  "name": "localflare",
+  "version": "0.0.1",
+  "description": "Local development dashboard for Cloudflare Workers",
+  "type": "module",
+  "bin": {
+    "localflare": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@localflare/core": "workspace:*",
+    "@localflare/dashboard": "workspace:*",
+    "@localflare/server": "workspace:*",
+    "cac": "^6.7.14",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "miniflare",
+    "local",
+    "development",
+    "dashboard",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/localflare/localflare"
+  },
+  "homepage": "https://github.com/localflare/localflare#readme"
+}

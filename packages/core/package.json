@@ -1,0 +1,41 @@
+{
+  "name": "@localflare/core",
+  "version": "0.0.1",
+  "description": "Core Miniflare wrapper for LocalFlare",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.2",
+    "miniflare": "^3.20241218.0",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "miniflare",
+    "local",
+    "development"
+  ],
+  "license": "MIT"
+}

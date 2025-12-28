@@ -1,0 +1,47 @@
+import { Hono } from 'hono'
+import type { LocalFlare } from '@localflare/core'
+
+export function createQueueRoutes(localflare: LocalFlare) {
+  const app = new Hono()
+
+  // List all queue producers
+  app.get('/', async (c) => {
+    const bindings = localflare.getDiscoveredBindings()
+    return c.json({
+      producers: bindings?.queues.producers ?? [],
+      consumers: bindings?.queues.consumers ?? [],
+    })
+  })
+
+  // Send a message to a queue
+  app.post('/:binding/send', async (c) => {
+    try {
+      const queue = await localflare.getQueueProducer(c.req.param('binding'))
+      const body = await c.req.json<{ message: unknown; options?: { delaySeconds?: number } }>()
+
+      await queue.send(body.message, body.options)
+
+      return c.json({ success: true })
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
+  })
+
+  // Send batch of messages
+  app.post('/:binding/send-batch', async (c) => {
+    try {
+      const queue = await localflare.getQueueProducer(c.req.param('binding'))
+      const { messages } = await c.req.json<{
+        messages: Array<{ body: unknown; delaySeconds?: number }>
+      }>()
+
+      await queue.sendBatch(messages)
+
+      return c.json({ success: true, sent: messages.length })
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
+  })
+
+  return app
+}
