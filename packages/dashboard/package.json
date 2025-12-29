@@ -1,6 +1,6 @@
 {
   "name": "localflare-dashboard",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Dashboard UI for LocalFlare",
   "type": "module",
   "scripts": {

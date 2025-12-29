@@ -1,6 +1,6 @@
 {
   "name": "localflare-server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Dashboard API server for LocalFlare",
   "type": "module",
   "main": "./dist/index.js",
