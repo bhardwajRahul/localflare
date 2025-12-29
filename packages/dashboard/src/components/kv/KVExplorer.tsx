@@ -1,58 +1,68 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { HardDrive, Key, RefreshCw, Plus, Trash2, Search } from 'lucide-react'
-import { kvApi } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  HardDriveIcon,
+  Key01Icon,
+  Loading03Icon,
+  Add01Icon,
+  Delete02Icon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons"
+import { kvApi } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
 
 export function KVExplorer() {
   const [selectedNs, setSelectedNs] = useState<string | null>(null)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const [searchPrefix, setSearchPrefix] = useState('')
-  const [newKey, setNewKey] = useState('')
-  const [newValue, setNewValue] = useState('')
+  const [searchPrefix, setSearchPrefix] = useState("")
+  const [newKey, setNewKey] = useState("")
+  const [newValue, setNewValue] = useState("")
 
   const queryClient = useQueryClient()
 
   const { data: namespaces, isLoading: loadingNamespaces } = useQuery({
-    queryKey: ['kv-namespaces'],
+    queryKey: ["kv-namespaces"],
     queryFn: kvApi.list,
   })
 
   const { data: keys, isLoading: loadingKeys } = useQuery({
-    queryKey: ['kv-keys', selectedNs, searchPrefix],
-    queryFn: () => (selectedNs ? kvApi.getKeys(selectedNs, searchPrefix || undefined) : null),
+    queryKey: ["kv-keys", selectedNs, searchPrefix],
+    queryFn: () =>
+      selectedNs ? kvApi.getKeys(selectedNs, searchPrefix || undefined) : null,
     enabled: !!selectedNs,
   })
 
   const { data: keyValue } = useQuery({
-    queryKey: ['kv-value', selectedNs, selectedKey],
-    queryFn: () => (selectedNs && selectedKey ? kvApi.getValue(selectedNs, selectedKey) : null),
+    queryKey: ["kv-value", selectedNs, selectedKey],
+    queryFn: () =>
+      selectedNs && selectedKey ? kvApi.getValue(selectedNs, selectedKey) : null,
     enabled: !!selectedNs && !!selectedKey,
   })
 
   const setValueMutation = useMutation({
     mutationFn: ({ key, value }: { key: string; value: string }) => {
-      if (!selectedNs) throw new Error('No namespace selected')
+      if (!selectedNs) throw new Error("No namespace selected")
       return kvApi.setValue(selectedNs, key, value)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kv-keys', selectedNs] })
-      setNewKey('')
-      setNewValue('')
+      queryClient.invalidateQueries({ queryKey: ["kv-keys", selectedNs] })
+      setNewKey("")
+      setNewValue("")
     },
   })
 
   const deleteKeyMutation = useMutation({
     mutationFn: (key: string) => {
-      if (!selectedNs) throw new Error('No namespace selected')
+      if (!selectedNs) throw new Error("No namespace selected")
       return kvApi.deleteKey(selectedNs, key)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kv-keys', selectedNs] })
+      queryClient.invalidateQueries({ queryKey: ["kv-keys", selectedNs] })
       setSelectedKey(null)
     },
   })
@@ -60,7 +70,11 @@ export function KVExplorer() {
   if (loadingNamespaces) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+        <HugeiconsIcon
+          icon={Loading03Icon}
+          className="size-6 animate-spin text-muted-foreground"
+          strokeWidth={2}
+        />
       </div>
     )
   }
@@ -70,11 +84,17 @@ export function KVExplorer() {
       <div className="p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HardDrive className="w-5 h-5 text-green-500" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <HugeiconsIcon
+                icon={HardDriveIcon}
+                className="size-5 text-green-500"
+                strokeWidth={2}
+              />
               KV Namespaces
             </CardTitle>
-            <CardDescription>No KV namespaces configured in wrangler.toml</CardDescription>
+            <CardDescription>
+              No KV namespaces configured in wrangler.toml
+            </CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -84,8 +104,12 @@ export function KVExplorer() {
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <HardDrive className="w-5 h-5 text-green-500" />
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <HugeiconsIcon
+            icon={HardDriveIcon}
+            className="size-5 text-green-500"
+            strokeWidth={2}
+          />
           KV Namespaces
         </h2>
       </div>
@@ -105,11 +129,17 @@ export function KVExplorer() {
                   setSelectedKey(null)
                 }}
                 className={cn(
-                  'w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-2',
-                  selectedNs === ns.binding ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                  "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2",
+                  selectedNs === ns.binding
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
                 )}
               >
-                <HardDrive className="w-4 h-4" />
+                <HugeiconsIcon
+                  icon={HardDriveIcon}
+                  className="size-4"
+                  strokeWidth={2}
+                />
                 {ns.binding}
               </button>
             ))}
@@ -119,12 +149,16 @@ export function KVExplorer() {
             <>
               <div className="p-2 border-t border-b">
                 <div className="relative">
-                  <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <HugeiconsIcon
+                    icon={Search01Icon}
+                    className="size-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    strokeWidth={2}
+                  />
                   <Input
                     value={searchPrefix}
                     onChange={(e) => setSearchPrefix(e.target.value)}
                     placeholder="Filter by prefix..."
-                    className="pl-8 h-8 text-sm"
+                    className="pl-8 h-8 text-xs"
                   />
                 </div>
               </div>
@@ -135,7 +169,11 @@ export function KVExplorer() {
                 <div className="p-2 space-y-0.5">
                   {loadingKeys ? (
                     <div className="flex justify-center py-4">
-                      <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="size-4 animate-spin text-muted-foreground"
+                        strokeWidth={2}
+                      />
                     </div>
                   ) : (
                     keys?.keys.map((key) => (
@@ -143,13 +181,17 @@ export function KVExplorer() {
                         key={key.name}
                         onClick={() => setSelectedKey(key.name)}
                         className={cn(
-                          'w-full text-left px-2 py-1 rounded text-xs flex items-center gap-2 font-mono',
+                          "w-full text-left px-2 py-1 rounded text-xs flex items-center gap-2 font-mono",
                           selectedKey === key.name
-                            ? 'bg-accent text-accent-foreground'
-                            : 'hover:bg-muted text-muted-foreground'
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-muted text-muted-foreground"
                         )}
                       >
-                        <Key className="w-3 h-3 flex-shrink-0" />
+                        <HugeiconsIcon
+                          icon={Key01Icon}
+                          className="size-3 shrink-0"
+                          strokeWidth={2}
+                        />
                         <span className="truncate">{key.name}</span>
                       </button>
                     ))
@@ -166,7 +208,7 @@ export function KVExplorer() {
             <div className="flex-1 flex flex-col">
               <div className="p-4 border-b flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium font-mono text-sm">{selectedKey}</h3>
+                  <h3 className="font-medium font-mono text-xs">{selectedKey}</h3>
                   {keyValue.metadata ? (
                     <p className="text-xs text-muted-foreground mt-1">
                       Metadata: {JSON.stringify(keyValue.metadata)}
@@ -179,13 +221,17 @@ export function KVExplorer() {
                   onClick={() => deleteKeyMutation.mutate(selectedKey)}
                   disabled={deleteKeyMutation.isPending}
                 >
-                  <Trash2 className="w-4 h-4 mr-1" />
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    className="size-4 mr-1"
+                    strokeWidth={2}
+                  />
                   Delete
                 </Button>
               </div>
               <div className="flex-1 p-4 overflow-auto">
-                <pre className="p-4 rounded-lg bg-muted font-mono text-sm whitespace-pre-wrap break-all">
-                  {typeof keyValue.value === 'string'
+                <pre className="p-4 rounded-lg bg-muted font-mono text-xs whitespace-pre-wrap break-all">
+                  {typeof keyValue.value === "string"
                     ? keyValue.value
                     : JSON.stringify(keyValue.value, null, 2)}
                 </pre>
@@ -195,14 +241,18 @@ export function KVExplorer() {
             <div className="flex-1 p-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <HugeiconsIcon
+                      icon={Add01Icon}
+                      className="size-4"
+                      strokeWidth={2}
+                    />
                     Add New Key
                   </CardTitle>
                 </CardHeader>
                 <div className="px-6 pb-6 space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Key</label>
+                    <label className="text-xs font-medium">Key</label>
                     <Input
                       value={newKey}
                       onChange={(e) => setNewKey(e.target.value)}
@@ -211,26 +261,32 @@ export function KVExplorer() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Value</label>
+                    <label className="text-xs font-medium">Value</label>
                     <textarea
                       value={newValue}
                       onChange={(e) => setNewValue(e.target.value)}
                       placeholder="Enter value..."
-                      className="mt-1 w-full min-h-[150px] p-3 rounded-md border bg-background font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="mt-1 w-full min-h-[150px] p-3 rounded-lg border bg-background font-mono text-xs resize-none focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                   </div>
                   <Button
-                    onClick={() => setValueMutation.mutate({ key: newKey, value: newValue })}
+                    onClick={() =>
+                      setValueMutation.mutate({ key: newKey, value: newValue })
+                    }
                     disabled={!newKey || !newValue || setValueMutation.isPending}
                   >
-                    <Plus className="w-4 h-4 mr-1" />
+                    <HugeiconsIcon
+                      icon={Add01Icon}
+                      className="size-4 mr-1"
+                      strokeWidth={2}
+                    />
                     Add Key
                   </Button>
                 </div>
               </Card>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
               Select a namespace to browse keys
             </div>
           )}
