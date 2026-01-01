@@ -1,4 +1,29 @@
-const API_BASE = '/api'
+/**
+ * Get the API base URL.
+ * Uses /__localflare prefix to avoid conflicts with user's /api/* routes.
+ *
+ * - In hosted mode (studio.localflare.dev): API on localhost with port from URL
+ * - In local bundled mode: uses relative path
+ */
+export function getApiBase(): string {
+  // Check if we're on studio.localflare.dev or localhost:5174 (Dashboard Vite dev server)
+  const isHostedMode =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'studio.localflare.dev' ||
+      (window.location.hostname === 'localhost' && window.location.port === '5174'))
+
+  if (isHostedMode) {
+    // Hosted mode: API is on localhost with port from URL
+    const params = new URLSearchParams(window.location.search)
+    const port = params.get('port') || '8788'
+    return `http://localhost:${port}/__localflare`
+  }
+
+  // Local bundled mode: API is served from same origin
+  return '/__localflare'
+}
+
+const API_BASE = getApiBase()
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -92,6 +117,13 @@ export const r2Api = {
   },
   getObjectMeta: (binding: string, key: string) =>
     fetchApi<R2Object>(`/r2/${binding}/objects/${encodeURIComponent(key)}/meta`),
+  getObjectUrl: (binding: string, key: string) =>
+    `${API_BASE}/r2/${binding}/objects/${encodeURIComponent(key)}`,
+  getObjectContent: async (binding: string, key: string) => {
+    const response = await fetch(`${API_BASE}/r2/${binding}/objects/${encodeURIComponent(key)}`)
+    if (!response.ok) throw new Error('Failed to fetch object')
+    return response
+  },
   deleteObject: (binding: string, key: string) =>
     fetchApi<{ success: boolean }>(`/r2/${binding}/objects/${encodeURIComponent(key)}`, {
       method: 'DELETE',
@@ -119,7 +151,7 @@ export const doApi = {
       body: JSON.stringify(options),
     }),
   fetch: async (binding: string, id: string, path: string, options?: RequestInit) => {
-    const response = await fetch(`/api/do/${binding}/${id}/fetch${path}`, {
+    const response = await fetch(`${API_BASE}/do/${binding}/${id}/fetch${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',

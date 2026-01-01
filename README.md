@@ -1,6 +1,6 @@
 # Localflare
 
-Local development dashboard for Cloudflare Workers. Visualize and interact with your D1 databases, KV namespaces, R2 buckets, Durable Objects, and Queues - all locally.
+Local development dashboard for Cloudflare Workers. Visualize and interact with your D1 databases, KV namespaces, R2 buckets, Durable Objects, and Queues during development.
 
 ## Features
 
@@ -10,6 +10,22 @@ Local development dashboard for Cloudflare Workers. Visualize and interact with 
 - **Queue Inspector** - Send test messages to queues
 - **Durable Objects** - View and interact with DO instances
 - **Zero Config** - Reads your `wrangler.toml` automatically
+- **Framework Agnostic** - Works with any framework (Next.js, Nuxt, Remix, Hono, etc.)
+
+## Quick Start
+
+```bash
+# Navigate to your Cloudflare Worker project
+cd your-worker-project
+
+# Run Localflare
+npx localflare
+```
+
+That's it! Localflare will:
+1. Detect your `wrangler.toml` configuration
+2. Start your worker at `http://localhost:8787`
+3. Open the dashboard at `https://studio.localflare.dev`
 
 ## Installation
 
@@ -17,22 +33,56 @@ Local development dashboard for Cloudflare Workers. Visualize and interact with 
 npm install -g localflare
 # or
 pnpm add -g localflare
-# or
+# or use directly with npx
 npx localflare
 ```
 
 ## Usage
 
-Navigate to your Cloudflare Worker project directory and run:
+### Basic Usage
 
 ```bash
+# Run in your Worker project directory
 localflare
+
+# Custom port
+localflare --port 9000
+
+# Don't open browser automatically
+localflare --no-open
 ```
 
-This will:
-1. Read your `wrangler.toml` configuration
-2. Start your Worker on `http://localhost:8787`
-3. Start the dashboard on `http://localhost:8788`
+### Pass Wrangler Options
+
+Use `--` to pass options directly to wrangler:
+
+```bash
+# Use a specific environment
+localflare -- --env staging
+
+# Set environment variables
+localflare -- --var API_KEY:secret
+
+# Combine options
+localflare --port 9000 -- --env production --remote
+```
+
+### Attach Mode (for custom dev workflows)
+
+For projects with custom dev commands (OpenNext, Nuxt, etc.), use attach mode:
+
+```bash
+# Terminal 1: Your dev server
+pnpm dev        # or: opennext dev, nuxt dev, wrangler dev, etc.
+
+# Terminal 2: Localflare API
+localflare attach
+
+# Custom port for Localflare API
+localflare attach --port 9000
+```
+
+Attach mode runs the Localflare API separately, sharing the same `.wrangler/state` directory with your dev server.
 
 ### Options
 
@@ -40,65 +90,70 @@ This will:
 localflare [configPath] [options]
 
 Options:
-  -p, --port <port>           Worker port (default: 8787)
-  -d, --dashboard-port <port> Dashboard port (default: 8788)
-  --persist <path>            Persistence directory (default: .localflare)
-  -v, --verbose               Verbose output
-  -h, --help                  Display help
-  --version                   Display version
+  -p, --port <port>  Worker port (default: 8787)
+  -v, --verbose      Verbose output
+  --no-open          Don't open browser automatically
+  --no-tui           Disable TUI, use simple console output
+  --dev              Open local dashboard instead of studio.localflare.dev
+  -h, --help         Display help
+  --version          Display version
+
+localflare attach [configPath] [options]
+
+Options:
+  -p, --port <port>  Localflare API port (default: 8788)
+  --no-open          Don't open browser automatically
+  --dev              Open local dashboard instead of studio.localflare.dev
 ```
 
-### Example
+## Requirements
 
-```bash
-# Use default settings
-localflare
+- **Node.js 18+**
+- **A Cloudflare Workers project** with `wrangler.toml`
+- **wrangler dev** must work for your project (Localflare runs alongside wrangler)
 
-# Custom ports
-localflare -p 3000 -d 3001
+### Supported Project Types
 
-# With custom config path
-localflare ./custom/wrangler.toml
+| Project Type | Mode | Command |
+|--------------|------|---------|
+| Standard Workers | Default | `npx localflare` |
+| Hono, Remix, Astro, SvelteKit | Default | `npx localflare` |
+| OpenNext (Next.js on Workers) | Attach | `npx localflare attach` |
+| Nuxt on Workers | Attach | `npx localflare attach` |
+| Custom wrangler setups | Attach | `npx localflare attach` |
+
+## How It Works
+
+Localflare uses a **sidecar architecture** that runs alongside your worker in the same wrangler process. Both workers share the exact same binding instances, enabling full read/write access to all your data.
+
+```
+Single wrangler dev Process
+├── Your Worker (http://localhost:8787)
+│   └── Your application code unchanged
+├── Localflare API Worker
+│   └── Dashboard API routes (/__localflare/*)
+└── Shared Bindings
+    ├── D1 databases (same instance)
+    ├── KV namespaces (same instance)
+    ├── R2 buckets (same instance)
+    ├── Queues (same in-memory queue)
+    └── Durable Objects (same instances)
 ```
 
-## Architecture
-
-Localflare uses [Miniflare](https://miniflare.dev) under the hood to run your Worker locally. This ensures 100% compatibility with the Cloudflare runtime.
-
-```
-┌────────────────────────────────────────────────────┐
-│              Localflare (single process)           │
-│                                                    │
-│  ┌──────────────────────────────────────────────┐  │
-│  │              Miniflare Runtime                │  │
-│  │  ┌────────┐  ┌────────┐  ┌────────┐          │  │
-│  │  │   D1   │  │   KV   │  │   R2   │  ...     │  │
-│  │  └────────┘  └────────┘  └────────┘          │  │
-│  └──────────────────────────────────────────────┘  │
-│                        │                           │
-│         ┌──────────────┴──────────────┐            │
-│         │       Shared Bindings       │            │
-│         └──────────────┬──────────────┘            │
-│                        │                           │
-│  ┌─────────────────────┴─────────────────────┐     │
-│  │                                           │     │
-│  │  ┌─────────────────┐  ┌─────────────┐     │     │
-│  │  │   Your Worker   │  │  Dashboard  │     │     │
-│  │  │     :8787       │  │    :8788    │     │     │
-│  │  └─────────────────┘  └─────────────┘     │     │
-│  │                                           │     │
-│  └───────────────────────────────────────────┘     │
-└────────────────────────────────────────────────────┘
-```
+This architecture means:
+- **Your code stays untouched** - No SDK, no modifications needed
+- **Real binding instances** - Not mocks, actual working bindings
+- **Queue messages actually work** - Send messages that your consumer receives
+- **Works with any framework** - If it runs on Workers, it works with Localflare
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| `localflare` | CLI tool |
-| `localflare-core` | Miniflare wrapper and config parser |
-| `localflare-server` | Dashboard API server |
-| `localflare-dashboard` | React dashboard UI |
+| `localflare` | CLI tool - the main entry point |
+| `localflare-api` | API worker that powers the dashboard |
+| `localflare-core` | Config parser and utilities |
+| `localflare-dashboard` | React dashboard UI (hosted at studio.localflare.dev) |
 
 ## Development
 
@@ -127,11 +182,7 @@ pnpm dev
 | R2 | ✅ Full | File browser, upload/download, metadata |
 | Durable Objects | ✅ Full | Instance listing, state inspection |
 | Queues | ✅ Full | Message viewer, send test messages |
-| Service Bindings | ✅ Full | - |
-| Cache API | ✅ Full | Cache viewer |
-| Hyperdrive | ✅ Full | Connection status |
-| Vectorize | ⚠️ Limited | Basic operations |
-| Workers AI | ⚠️ Mock | Mock responses |
+| Service Bindings | ✅ Full | Automatic proxying |
 
 ## Sponsorship
 
