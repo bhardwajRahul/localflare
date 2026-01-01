@@ -1,89 +1,79 @@
 import { Hono } from 'hono'
-import Database from 'better-sqlite3'
-import type { WranglerStateInfo } from '../lib/types.js'
+import type { Env } from '../types.js'
+import { getManifest, isD1Database } from '../types.js'
 
-export function createD1Routes(stateInfo: WranglerStateInfo) {
-  const app = new Hono()
+export function createD1Routes() {
+  const app = new Hono<{ Bindings: Env }>()
 
-  // Helper to get database instance
-  function getDatabase(binding: string): Database.Database | null {
-    const dbFile = stateInfo.d1Databases.find(
-      (f) => f.binding === binding || f.filename.startsWith(binding)
-    )
-    // If no match by binding, try by index (binding could be the index)
-    const index = parseInt(binding, 10)
-    const file = dbFile ?? (Number.isInteger(index) ? stateInfo.d1Databases[index] : stateInfo.d1Databases[0])
-
-    if (!file) return null
-
-    const db = new Database(file.path, { readonly: false })
-    db.pragma('journal_mode = WAL')
-    db.pragma('busy_timeout = 5000')
-    return db
+  // Helper to get database from env
+  function getDatabase(env: Env, binding: string): D1Database | null {
+    const db = env[binding]
+    if (isD1Database(db)) {
+      return db
+    }
+    return null
   }
 
   // List all D1 databases
   app.get('/', async (c) => {
+    const manifest = getManifest(c.env)
     return c.json({
-      databases: stateInfo.d1Databases.map((f, i) => ({
-        binding: f.binding ?? `database_${i}`,
-        database_name: f.binding ?? f.filename.replace('.sqlite', ''),
-        file: f.filename,
+      databases: manifest.d1.map((db) => ({
+        binding: db.binding,
+        database_name: db.database_name,
       })),
     })
   })
 
   // Get schema for a database
   app.get('/:binding/schema', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
 
     try {
-      const tables = db
-        .prepare(
-          `SELECT name, sql FROM sqlite_master
-           WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE '_mf_%'
-           ORDER BY name`
-        )
-        .all()
+      const result = await db.prepare(
+        `SELECT name, sql FROM sqlite_master
+         WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE '_mf_%'
+         ORDER BY name`
+      ).all()
 
-      return c.json({ tables })
+      return c.json({ tables: result.results })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Get table info (columns)
   app.get('/:binding/tables/:table', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
 
     try {
       const tableName = c.req.param('table')
-      const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all()
-      const countResult = db.prepare(`SELECT COUNT(*) as count FROM "${tableName}"`).get() as { count: number }
+
+      // Get column info
+      const columnsResult = await db.prepare(`PRAGMA table_info("${tableName}")`).all()
+
+      // Get row count
+      const countResult = await db.prepare(`SELECT COUNT(*) as count FROM "${tableName}"`).first<{ count: number }>()
 
       return c.json({
         table: tableName,
-        columns,
+        columns: columnsResult.results,
         rowCount: countResult?.count ?? 0,
       })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Query data from a table with pagination
   app.get('/:binding/tables/:table/rows', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
@@ -93,24 +83,23 @@ export function createD1Routes(stateInfo: WranglerStateInfo) {
       const limit = Number(c.req.query('limit')) || 100
       const offset = Number(c.req.query('offset')) || 0
 
-      const rows = db
+      const result = await db
         .prepare(`SELECT * FROM "${tableName}" LIMIT ? OFFSET ?`)
-        .all(limit, offset)
+        .bind(limit, offset)
+        .all()
 
       return c.json({
-        rows,
+        rows: result.results,
         meta: { limit, offset },
       })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Execute arbitrary SQL query
   app.post('/:binding/query', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
@@ -125,32 +114,35 @@ export function createD1Routes(stateInfo: WranglerStateInfo) {
       // Determine if it's a read or write query
       const isRead = sql.trim().toUpperCase().startsWith('SELECT')
 
+      const stmt = db.prepare(sql)
+      const boundStmt = params.length > 0 ? stmt.bind(...params) : stmt
+
       if (isRead) {
-        const stmt = db.prepare(sql)
-        const results = params.length > 0 ? stmt.all(...params) : stmt.all()
+        const result = await boundStmt.all()
         return c.json({
           success: true,
-          results,
-          meta: { changes: 0 },
+          results: result.results,
+          meta: { changes: 0, duration: result.meta?.duration },
         })
       } else {
-        const stmt = db.prepare(sql)
-        const result = params.length > 0 ? stmt.run(...params) : stmt.run()
+        const result = await boundStmt.run()
         return c.json({
           success: true,
-          meta: { changes: result.changes },
+          meta: {
+            changes: result.meta?.changes ?? 0,
+            last_row_id: result.meta?.last_row_id,
+            duration: result.meta?.duration,
+          },
         })
       }
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Insert a row
   app.post('/:binding/tables/:table/rows', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
@@ -164,22 +156,23 @@ export function createD1Routes(stateInfo: WranglerStateInfo) {
       const placeholders = columns.map(() => '?').join(', ')
 
       const sql = `INSERT INTO "${tableName}" (${columns.map((col) => `"${col}"`).join(', ')}) VALUES (${placeholders})`
-      const result = db.prepare(sql).run(...values)
+      const result = await db.prepare(sql).bind(...values).run()
 
       return c.json({
         success: true,
-        meta: { changes: result.changes, lastInsertRowid: result.lastInsertRowid },
+        meta: {
+          changes: result.meta?.changes ?? 0,
+          last_row_id: result.meta?.last_row_id,
+        },
       })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Update a row
   app.put('/:binding/tables/:table/rows/:id', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
@@ -195,22 +188,20 @@ export function createD1Routes(stateInfo: WranglerStateInfo) {
       const values = [...Object.values(data), id]
 
       const sql = `UPDATE "${tableName}" SET ${setClause} WHERE id = ?`
-      const result = db.prepare(sql).run(...values)
+      const result = await db.prepare(sql).bind(...values).run()
 
       return c.json({
         success: true,
-        meta: { changes: result.changes },
+        meta: { changes: result.meta?.changes ?? 0 },
       })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 
   // Delete a row
   app.delete('/:binding/tables/:table/rows/:id', async (c) => {
-    const db = getDatabase(c.req.param('binding'))
+    const db = getDatabase(c.env, c.req.param('binding'))
     if (!db) {
       return c.json({ error: 'Database not found' }, 404)
     }
@@ -219,16 +210,14 @@ export function createD1Routes(stateInfo: WranglerStateInfo) {
       const tableName = c.req.param('table')
       const id = c.req.param('id')
 
-      const result = db.prepare(`DELETE FROM "${tableName}" WHERE id = ?`).run(id)
+      const result = await db.prepare(`DELETE FROM "${tableName}" WHERE id = ?`).bind(id).run()
 
       return c.json({
         success: true,
-        meta: { changes: result.changes },
+        meta: { changes: result.meta?.changes ?? 0 },
       })
     } catch (error) {
       return c.json({ error: String(error) }, 500)
-    } finally {
-      db.close()
     }
   })
 

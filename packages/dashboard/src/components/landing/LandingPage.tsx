@@ -15,7 +15,7 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onRetry }: LandingPageProps) {
-  const port = new URLSearchParams(window.location.search).get('port') || '8788'
+  const port = new URLSearchParams(window.location.search).get('port') || '8787'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex flex-col">
@@ -64,10 +64,10 @@ export function LandingPage({ onRetry }: LandingPageProps) {
 
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-3">
-          Waiting for Localflare Server
+          Waiting for Localflare
         </h1>
         <p className="text-muted-foreground text-center max-w-md mb-10">
-          Start the Localflare API server to view and manage your Cloudflare Workers bindings locally.
+          Start Localflare in your Worker project to view and manage your Cloudflare bindings locally.
         </p>
 
         {/* Instructions Card */}
@@ -99,22 +99,12 @@ export function LandingPage({ onRetry }: LandingPageProps) {
                 2
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium mb-2">Start the Localflare server</p>
+                <p className="text-sm font-medium mb-2">Run Localflare</p>
                 <code className="block p-3 rounded-lg bg-zinc-900 text-zinc-100 text-sm font-mono">
-                  npx localflare --studio --port {port}
+                  npx localflare
                 </code>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                3
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium mb-1">Make sure wrangler dev is running</p>
-                <p className="text-xs text-muted-foreground">
-                  Localflare reads from the <code className="px-1 py-0.5 bg-muted rounded">.wrangler/state</code> directory created by wrangler.
+                <p className="text-xs text-muted-foreground mt-2">
+                  This starts your worker and opens the dashboard automatically.
                 </p>
               </div>
             </div>

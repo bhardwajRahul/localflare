@@ -1,10 +1,11 @@
 /**
  * Get the API base URL.
- * - In local dev mode (Vite): defaults to localhost:8788
- * - In production (studio.localflare.dev): reads port from URL query param
- * - In local bundled mode: uses relative /api path
+ * Uses /__localflare prefix to avoid conflicts with user's /api/* routes.
+ *
+ * - In hosted mode (studio.localflare.dev): API on localhost with port from URL
+ * - In local bundled mode: uses relative path
  */
-function getApiBase(): string {
+export function getApiBase(): string {
   // Check if we're on studio.localflare.dev or localhost:5174 (Dashboard Vite dev server)
   const isHostedMode =
     typeof window !== 'undefined' &&
@@ -15,11 +16,11 @@ function getApiBase(): string {
     // Hosted mode: API is on localhost with port from URL
     const params = new URLSearchParams(window.location.search)
     const port = params.get('port') || '8788'
-    return `http://localhost:${port}/api`
+    return `http://localhost:${port}/__localflare`
   }
 
   // Local bundled mode: API is served from same origin
-  return '/api'
+  return '/__localflare'
 }
 
 const API_BASE = getApiBase()
@@ -150,7 +151,7 @@ export const doApi = {
       body: JSON.stringify(options),
     }),
   fetch: async (binding: string, id: string, path: string, options?: RequestInit) => {
-    const response = await fetch(`/api/do/${binding}/${id}/fetch${path}`, {
+    const response = await fetch(`${API_BASE}/do/${binding}/${id}/fetch${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
