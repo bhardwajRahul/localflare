@@ -203,10 +203,9 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Terminal 1: Start the demo app worker and localflare API
+# Terminal 1: Start the demo app worker
 cd demo-app
-pnpm run dev:client
-pnpm run dev:studio
+pnpm run dev:worker
 
 # Terminal 2: Start the dashboard
 cd packages/dashboard
@@ -257,6 +256,18 @@ A comprehensive database management interface inspired by Drizzle Studio and Sup
 - View table structure with column definitions
 - Column types and primary key indicators
 - Row counts per table
+
+## Contributing
+
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
+
+Check out our **[Contributing Guide](CONTRIBUTING.md)** to get started.
+
+Before contributing:
+1. Check existing [issues](https://github.com/rohanprasadofficial/localflare/issues) and [discussions](https://github.com/rohanprasadofficial/localflare/discussions)
+2. Read the [Contributing Guide](CONTRIBUTING.md)
+3. Follow the code style and conventions
+4. Test your changes thoroughly
 
 ## Sponsorship
 
