@@ -203,9 +203,10 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Terminal 1: Start the demo app worker
+# Terminal 1: Start the demo app worker and localflare API
 cd demo-app
-pnpm run dev:worker
+pnpm run dev:client
+pnpm run dev:studio
 
 # Terminal 2: Start the dashboard
 cd packages/dashboard

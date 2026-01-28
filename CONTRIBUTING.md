@@ -46,9 +46,10 @@ pnpm build
 4. **Start development**
 
 ```bash
-# Terminal 1: Start the demo app worker
+# Terminal 1: Start the demo app worker and localflare API
 cd demo-app
-pnpm run dev:worker
+pnpm run dev:client
+pnpm run dev:studio
 
 # Terminal 2: Start the dashboard
 cd packages/dashboard
@@ -97,7 +98,7 @@ pnpm build
 
 # Test with the demo app
 cd demo-app
-pnpm run dev:worker
+pnpm run dev:client
 
 # Or test with your own Worker project
 cd /path/to/your/worker
