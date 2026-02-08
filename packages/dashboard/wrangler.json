@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "localflare-studio",
+  "main": "worker/index.ts",
   "compatibility_date": "2024-12-01",
   "assets": {
     "directory": "./dist",
